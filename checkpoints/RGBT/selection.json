@@ -1,0 +1,14 @@
+{
+  "checkpoint": "model.pt",
+  "sha256": "a8e2de2df6d01453ef074dd945a89f98cc5d6483fc91ccf64a2aa69739bbee19",
+  "source_checkpoint": "run_r/step_3500.pt",
+  "step": 3500,
+  "criterion": "Highest recorded validation score in run_r",
+  "validation_score": -0.01824495817224184,
+  "baseline": "Frozen GaussianReconstruction, with all three refiners removed",
+  "prior_release_metadata": "../../outputs/rgbt/joint_release_20260920/previous_release/",
+  "scope": "Original training selection retained; adapter removal validated on Building img_025 nearest3/wide6 only.",
+  "source_checkpoint_sha256": "300bd52557afab216bd3bc7ebd346a41761b07653ba5300356dad0fdc66d594e",
+  "pruning": "Thermal adapters removed after selection; refiner weights unchanged.",
+  "source_acceptance_report": "../../outputs/rgbt/joint_release_20260920/acceptance_result.json"
+}

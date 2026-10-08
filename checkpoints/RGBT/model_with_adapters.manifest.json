@@ -1,0 +1,28 @@
+{
+  "format": "da3-rgbt-unified",
+  "architecture": "rgbt-gaussian-network",
+  "checkpoint": "model.pt",
+  "bytes": 5435498477,
+  "sha256": "300bd52557afab216bd3bc7ebd346a41761b07653ba5300356dad0fdc66d594e",
+  "self_contained": true,
+  "learned_joint": true,
+  "parameters": 1358773040,
+  "refinement_parameters": 564815,
+  "previous_refinement_parameters": 868996,
+  "refinement_reduction_percent": 35.00372844063724,
+  "teacher_sha256": "75742d3bdeff7c934f1e7135981fdfa69a6357f4696e422383076428390783c8",
+  "teacher_backup": "../../outputs/rgbt/joint_training_20260920/before/model.pt",
+  "training_step": 3500,
+  "training_recipe": "../../configs/rgbt_joint_train.json",
+  "training_seed": {
+    "file": "training_seed.pt",
+    "sha256": "38d4a4f0798c49bb4398ca27f5e702d93b00cba1ee683288f9285875b86ba4d3"
+  },
+  "training_state": {
+    "file": "training_state.pt",
+    "sha256": "937aa9e2c6b72a3e9bc3805af0d6961cc09ea5b35fec55283d106018a18c0340"
+  },
+  "report": "../../outputs/rgbt/joint_release_20260920/REPORT.md",
+  "acceptance": "../../outputs/rgbt/joint_release_20260920/acceptance_result.json",
+  "verification": "../../outputs/rgbt/joint_release_20260920/default_model_verification.json"
+}

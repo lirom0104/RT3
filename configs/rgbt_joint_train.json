@@ -1,0 +1,42 @@
+{
+  "train_cache": "outputs/rgbt/joint_training_20260920/cache_ordered_train_full",
+  "val_cache": "outputs/rgbt/joint_training_20260920/cache_ordered_val",
+  "teacher": "outputs/rgbt/joint_training_20260920/before/model.pt",
+  "steps": 4000,
+  "eval_every": 500,
+  "lr": 0.0001,
+  "attention_pairs": 2,
+  "channels": 96,
+  "iterations": 1,
+  "global_context": false,
+  "geometry_context": false,
+  "ordered_updates": true,
+  "phase_modulation": true,
+  "preserve_first_update": true,
+  "shared_residual": true,
+  "rollout_final_probability": 0.5,
+  "quality_preservation_weight": 0.5,
+  "update_distill_weight": 20.0,
+  "phase_loss_weights": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "phase_sampling_weights": [
+    0.0,
+    1.0,
+    1.0
+  ],
+  "phase_lr_multiplier": 10.0,
+  "covariance_distill": true,
+  "distill_weight": 0.2,
+  "image_weight": 1.0,
+  "teacher_image_weight": 8.0,
+  "no_trust": false,
+  "flexible_geometry": false,
+  "robust_distill": true,
+  "perceptual_weight": 0.5,
+  "seed": 20261007,
+  "init_refiner": "checkpoints/RGBT/training_seed.pt",
+  "distill_only": true
+}

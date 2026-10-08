@@ -1,0 +1,120 @@
+{
+  "architecture": "rgbt-gaussian-network",
+  "foundation": {
+    "__object__": {
+      "path": "depth_anything_3.model.da3",
+      "name": "DepthAnything3Net",
+      "args": "as_params"
+    },
+    "net": {
+      "__object__": {
+        "path": "depth_anything_3.model.dinov2.dinov2",
+        "name": "DinoV2",
+        "args": "as_params"
+      },
+      "name": "vitg",
+      "out_layers": [
+        19,
+        27,
+        33,
+        39
+      ],
+      "alt_start": 13,
+      "qknorm_start": 13,
+      "rope_start": 13,
+      "cat_token": true
+    },
+    "head": {
+      "__object__": {
+        "path": "depth_anything_3.model.dualdpt",
+        "name": "DualDPT",
+        "args": "as_params"
+      },
+      "dim_in": 3072,
+      "output_dim": 2,
+      "features": 256,
+      "out_channels": [
+        256,
+        512,
+        1024,
+        1024
+      ]
+    },
+    "cam_enc": {
+      "__object__": {
+        "path": "depth_anything_3.model.cam_enc",
+        "name": "CameraEnc",
+        "args": "as_params"
+      },
+      "dim_out": 1536
+    },
+    "cam_dec": {
+      "__object__": {
+        "path": "depth_anything_3.model.cam_dec",
+        "name": "CameraDec",
+        "args": "as_params"
+      },
+      "dim_in": 3072
+    },
+    "gs_head": {
+      "__object__": {
+        "path": "depth_anything_3.model.gsdpt",
+        "name": "GSDPT",
+        "args": "as_params"
+      },
+      "dim_in": 3072,
+      "output_dim": 38,
+      "features": 256,
+      "out_channels": [
+        256,
+        512,
+        1024,
+        1024
+      ]
+    },
+    "gs_adapter": {
+      "__object__": {
+        "path": "depth_anything_3.model.gs_adapter",
+        "name": "GaussianAdapter",
+        "args": "as_params"
+      },
+      "sh_degree": 2,
+      "pred_color": false,
+      "pred_offset_depth": true,
+      "pred_offset_xy": true,
+      "gaussian_scale_min": 1e-05,
+      "gaussian_scale_max": 30.0
+    }
+  },
+  "reconstruction": {
+    "channels": 64,
+    "adapter_hidden": 96,
+    "adapter_layers": [],
+    "rgb_source_blend": 0.65,
+    "geometry_mode": "anchored",
+    "depth_residual_limit": 0.03,
+    "rgb_residual_limit": 0.0,
+    "min_pixel_scale": 0.35,
+    "max_pixel_scale": 2.0,
+    "opacity_floor": 0.15,
+    "compact": true
+  },
+  "trainable_modules": [
+    "refiner"
+  ],
+  "joint_refinement": true,
+  "learned_joint": {
+    "channels": 96,
+    "attention_pairs": 2,
+    "trust": true,
+    "color_feedback": true,
+    "flexible_geometry": false,
+    "iterations": 1,
+    "global_context": false,
+    "geometry_context": false,
+    "ordered_updates": true,
+    "phase_modulation": true,
+    "preserve_first_update": true,
+    "shared_residual": true
+  }
+}
