@@ -34,10 +34,5 @@ src/debug_main.py
 src/outputs
 temp*.png
 /outputs
-
-# Local model weights and tooling cache
-/checkpoints/**/*.pt
-/checkpoints/**/*.pth
-/checkpoints/**/*.ckpt
-/checkpoints/**/*.safetensors
-.ruff_cache/
+/checkpoints
+/artifacts

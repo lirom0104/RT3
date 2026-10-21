@@ -1,0 +1,25 @@
+flowchart TD
+    RGB["RGB 多视角输入<br/>B × N_RGB × 3 × H × W"]:::frozen
+    IR["热红外多视角输入<br/>B × N_IR × 3 × H × W"]:::frozen
+    RGB --> PRE_RGB["统一尺寸 / 中心裁剪<br/>ImageNet 归一化"]:::frozen
+    IR --> PRE_IR["3 通道读取 / 统一尺寸 / 中心裁剪<br/>ImageNet 归一化"]:::frozen
+    PRE_RGB --> STACK["按视角维 N 堆叠<br/>N = N_RGB + N_IR；训练 N = 8"]:::frozen
+    PRE_IR --> STACK
+    STACK --> PATCH["共享 Patch Embedding + CLS token + 位置编码<br/>14 × 14 patch；1536 维"]:::frozen
+    PATCH --> EARLY["共享 ViT-G：Block 0–12<br/>每张图内部注意力；24 heads；SwiGLU"]:::frozen
+    EARLY --> ROUTE["根据 thermal_mask 选择 camera token<br/>替换每张图的 CLS token，进入 Block 13"]:::frozen
+    RGB_TOKEN["RGB camera token（冻结）<br/>参考视角 / 其他视角：1 × 2 × 1536"]:::frozen --> ROUTE
+    IR_TOKEN["热红外 camera token（可训练）<br/>从 RGB token 复制初始化：1 × 2 × 1536"]:::train --> ROUTE
+    ROUTE --> AGG["共享 ViT-G：Block 13–39<br/>奇数层 Global / 偶数层 Local Attention 交替<br/>Global 层融合 RGB 与红外多视角信息"]:::fusion
+    LORA["共享 LoRA × 27 层（可训练）<br/>qkv / proj / w12 / w3<br/>rank 64；alpha 128；dropout 0.1"]:::train -.-> AGG
+    AGG --> FEATS["提取 Block 19 / 27 / 33 / 39<br/>Local + Global 特征：1536 + 1536 = 3072 维"]:::fusion
+    FEATS -->|四层 Patch 特征| DPT["DualDPT<br/>特征金字塔投影 / 缩放 / 逐级融合"]:::frozen
+    FEATS -->|最后一层 camera token| CAM["CameraDec<br/>两层 FC + ReLU → 平移 / 四元数 / 视场角"]:::frozen
+    DPT --> DEPTH["每个视角的深度图 + 深度置信度<br/>B × N × H × W"]:::output
+    DPT -.-> RAY["Ray + Ray 置信度<br/>当前路径计算后移除"]:::muted
+    CAM --> POSE["每个视角的相机外参 + 内参<br/>外参为 OpenCV w2c"]:::output
+    classDef frozen fill:#edf5ff,stroke:#4774ae,color:#25354b
+    classDef train fill:#fff1df,stroke:#d48222,color:#25354b
+    classDef fusion fill:#f1ecff,stroke:#8262b8,color:#25354b
+    classDef output fill:#eaf7f2,stroke:#4b9276,color:#25354b
+    classDef muted fill:#f5f6f8,stroke:#9aa3af,color:#65778d,stroke-dasharray:5 5

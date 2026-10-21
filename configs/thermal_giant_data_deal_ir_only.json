@@ -1,0 +1,33 @@
+{
+  "data_root": "/home/lf/feedforward/data/DATA-DEAL",
+  "base_checkpoint": "/home/lf/feedforward/base/depth-anything-3/checkpoints/DA3-GIANT-1.1",
+  "official_split": "/home/lf/feedforward/data/DATA-DEAL/_metadata/train_test_split.json",
+  "difficult_scenes": [
+    "conference-room",
+    "metallic-container",
+    "old-drinking-fountain",
+    "parking",
+    "statue",
+    "telescope"
+  ],
+  "output": "artifacts/thermal_giant_data_deal_ir_only",
+  "checkpoint_dir": "checkpoints/thermal_giant_data_deal_ir_only",
+  "lora_scope": "thermal_only",
+  "epochs": 100,
+  "patience": 20,
+  "views": 8,
+  "height": 392,
+  "width": 518,
+  "accumulation": 2,
+  "learning_rate": 5e-5,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1,
+  "rank": 64,
+  "alpha": 128,
+  "dropout": 0.1,
+  "start_block": 13,
+  "workers": 2,
+  "seed": 0,
+  "save_every": 50,
+  "log_every": 5
+}

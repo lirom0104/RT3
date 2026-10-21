@@ -1,0 +1,32 @@
+{
+  "data_root": "/home/lf/feedforward/analysis/exhibition_only_20261011/data",
+  "base_checkpoint": "/home/lf/feedforward/base/depth-anything-3/checkpoints/DA3-GIANT-1.1",
+  "official_split": "/home/lf/feedforward/base/SEAR/sear/configs/train_test_split.json",
+  "difficult_scenes": [
+    "conference-room",
+    "metallic-container",
+    "old-drinking-fountain",
+    "parking",
+    "statue",
+    "telescope"
+  ],
+  "output": "/home/lf/feedforward/DA3base/artifacts/thermal_giant_exhibition_retrain_20261012",
+  "epochs": 100,
+  "patience": 20,
+  "views": 8,
+  "height": 392,
+  "width": 518,
+  "accumulation": 1,
+  "learning_rate": 5e-05,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.1,
+  "rank": 64,
+  "alpha": 128,
+  "dropout": 0.1,
+  "start_block": 13,
+  "workers": 2,
+  "seed": 0,
+  "save_every": 50,
+  "log_every": 5,
+  "checkpoint_dir": "/home/lf/feedforward/DA3base/checkpoints/thermal_giant_exhibition_retrain_20261012"
+}

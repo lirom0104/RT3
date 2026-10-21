@@ -146,6 +146,7 @@ class DinoVisionTransformer(nn.Module):
         self.qknorm_start = qknorm_start
         self.rope_start = rope_start
         self.cat_token = cat_token
+        self.gradient_checkpointing = False
         self.num_tokens = 1
         self.n_blocks = depth
         self.num_heads = num_heads
@@ -299,6 +300,13 @@ class DinoVisionTransformer(nn.Module):
 
     def _get_intermediate_layers_not_chunked(self, x, n=1, export_feat_layers=[], **kwargs):
         B, S, _, H, W = x.shape
+        thermal_mask = kwargs.get("thermal_mask")
+        if thermal_mask is not None:
+            if thermal_mask.shape != (B, S) or thermal_mask.dtype != torch.bool:
+                raise ValueError("thermal_mask must be a boolean tensor of shape (B, S)")
+            thermal_mask = thermal_mask.to(x.device)
+            if not hasattr(self, "thermal_camera_token"):
+                raise ValueError("Install a thermal camera adapter before passing thermal_mask")
         x = self.prepare_tokens_with_masks(x)
         output, total_block_len, aux_output = [], len(self.blocks), []
         blocks_to_take = range(total_block_len - n, total_block_len) if isinstance(n, int) else n
@@ -319,6 +327,8 @@ class DinoVisionTransformer(nn.Module):
                 # Reorder views to place reference view first
                 x = reorder_by_reference(x, b_idx)
                 local_x = reorder_by_reference(local_x, b_idx)
+                if thermal_mask is not None:
+                    thermal_mask = reorder_by_reference(thermal_mask, b_idx)
 
             if self.alt_start != -1 and i == self.alt_start:
                 if kwargs.get("cam_token", None) is not None:
@@ -328,24 +338,34 @@ class DinoVisionTransformer(nn.Module):
                     ref_token = self.camera_token[:, :1].expand(B, -1, -1)
                     src_token = self.camera_token[:, 1:].expand(B, S - 1, -1)
                     cam_token = torch.cat([ref_token, src_token], dim=1)
-                # Avoid modifying activations needed by the thermal adapters' backward pass.
-                x = torch.cat((cam_token.unsqueeze(2), x[:, :, 1:]), dim=2)
+                if thermal_mask is not None:
+                    thermal_token = torch.cat([
+                        self.thermal_camera_token[:, :1].expand(B, -1, -1),
+                        self.thermal_camera_token[:, 1:].expand(B, S - 1, -1),
+                    ], dim=1)
+                    if kwargs.get("cam_token") is None:
+                        cam_token = torch.where(thermal_mask[..., None], thermal_token, cam_token)
+                    else:
+                        # Preserve calibrated pose conditioning, adding only the
+                        # learned modality offset relative to the original tokens.
+                        base_token = torch.cat([
+                            self.camera_token[:, :1].expand(B, -1, -1),
+                            self.camera_token[:, 1:].expand(B, S - 1, -1),
+                        ], dim=1)
+                        delta = thermal_token - base_token
+                        cam_token = cam_token + torch.where(
+                            thermal_mask[..., None], delta, torch.zeros_like(delta))
+                # Avoid modifying an activation needed by autograd/checkpoint recomputation.
+                x = torch.cat([cam_token.unsqueeze(2).to(x.dtype), x[:, :, 1:]], dim=2)
 
             if self.alt_start != -1 and i >= self.alt_start and i % 2 == 1:
                 x = self.process_attention(
-                    x, blk, "global", pos=g_pos, attn_mask=kwargs.get("attn_mask", None)
+                    x, blk, "global", pos=g_pos, attn_mask=kwargs.get("attn_mask", None),
+                    thermal_mask=thermal_mask,
                 )
             else:
-                x = self.process_attention(x, blk, "local", pos=l_pos)
+                x = self.process_attention(x, blk, "local", pos=l_pos, thermal_mask=thermal_mask)
                 local_x = x
-
-            token_adapter = kwargs.get("token_adapter")
-            if token_adapter is not None:
-                # The callback receives the current view permutation as well as patch shape.
-                x = token_adapter(i, x, (H // self.patch_size, W // self.patch_size),
-                                  locals().get("b_idx"))
-                if not (self.alt_start != -1 and i >= self.alt_start and i % 2 == 1):
-                    local_x = x
 
             if i in blocks_to_take:
                 out_x = torch.cat([local_x, x], dim=-1) if self.cat_token else x
@@ -357,8 +377,19 @@ class DinoVisionTransformer(nn.Module):
                 aux_output.append(x)
         return output, aux_output
 
-    def process_attention(self, x, block, attn_type="global", pos=None, attn_mask=None):
+    def process_attention(self, x, block, attn_type="global", pos=None, attn_mask=None,
+                          thermal_mask=None):
         b, s, n = x.shape[:3]
+        block_kwargs = {}
+        if getattr(block, "thermal_only_lora", False):
+            if thermal_mask is None:
+                thermal_mask = torch.zeros((b, s), device=x.device, dtype=torch.bool)
+            token_mask = thermal_mask[..., None].expand(b, s, n)
+            # Pass masks into checkpoint explicitly, so later forwards and view
+            # reordering cannot change the route during backward recomputation.
+            block_kwargs["lora_mask"] = token_mask.reshape(
+                (b * s, n) if attn_type == "local" else (b, s * n)
+            )
         if attn_type == "local":
             x = rearrange(x, "b s n c -> (b s) n c")
             if pos is not None:
@@ -370,12 +401,14 @@ class DinoVisionTransformer(nn.Module):
         else:
             raise ValueError(f"Invalid attention type: {attn_type}")
 
-        if getattr(self, "gradient_checkpointing", False) and self.training and torch.is_grad_enabled():
+        if self.gradient_checkpointing and self.training and torch.is_grad_enabled() and (
+            x.requires_grad or any(p.requires_grad for p in block.parameters())
+        ):
             x = torch.utils.checkpoint.checkpoint(
-                block, x, pos=pos, attn_mask=attn_mask, use_reentrant=False
+                block, x, pos=pos, attn_mask=attn_mask, use_reentrant=False, **block_kwargs
             )
         else:
-            x = block(x, pos=pos, attn_mask=attn_mask)
+            x = block(x, pos=pos, attn_mask=attn_mask, **block_kwargs)
 
         if attn_type == "local":
             x = rearrange(x, "(b s) n c -> b s n c", b=b, s=s)

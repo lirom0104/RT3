@@ -66,6 +66,7 @@ We release three series of models, each tailored for specific use cases in visua
 
 ### 🛠️ Codebase Features
 Our repository is designed to be a powerful and user-friendly toolkit for both practical application and future research.
+- [DA3 Giant thermal camera tokens + LoRA](docs/THERMAL_GIANT.md): SEAR data loading, training, checkpoint resume, and mixed RGB/thermal inference.
 - 🎨 **Interactive Web UI & Gallery**: Visualize model outputs and compare results with an easy-to-use Gradio-based web interface.
 - ⚡ **Flexible Command-Line Interface (CLI)**: Powerful and scriptable CLI for batch processing and integration into custom workflows.
 - 💾 **Multiple Export Formats**: Save your results in various formats, including `glb`, `npz`, depth images, `ply`, 3DGS videos, etc, to seamlessly connect with other tools.
@@ -326,20 +327,3 @@ If you find Depth Anything 3 useful in your research or projects, please cite ou
   year={2025}
 }
 ```
-
-## RGB-T unified Gaussian reconstruction
-
-The current `RGBTGaussianNetwork` combines frozen RGB-T DA3 reconstruction with one trained `LearnedJointRefiner`. One encoder and one output head share weights across three updates, replacing the three independent learned refiners. Refinement parameters decrease from 868,996 to 564,815. The complete model is stored in **`checkpoints/RGBT/model.pt`**, including the DA3-Giant backbone; inference requires no teacher or predecessor checkpoints. The four ViT thermal adapters have been pruned from this checkpoint; thermal features still enter the reconstruction neck and shared refiner. The preceding checkpoint is preserved at `checkpoints/RGBT/model_with_adapters.pt`.
-
-- [Architecture, inference, evaluation and fine-tuning](docs/RGBT.md)
-- [RGBT-Scenes / ThermoScenes: all 20 scenes, 534 evaluations and 3D previews](outputs/rgbt/evaluation_20260922/index.html)
-- [Shared architecture and reproducible training](docs/RGBT_LEARNED_JOINT.md)
-- [30 scenes / 766 cases: base, three-stage teacher, trained shared module](outputs/rgbt/joint_release_20260920/REPORT.md)
-- [Historical computation fusion and equivalence verification](docs/RGBT_JOINT_REFINER.md)
-- [30-scene module ablation and pruning report](outputs/rgbt/ablation_20260920/REPORT.md)
-- [All 383 target frames: before/after browser](outputs/rgbt/ablation_20260920/index.html)
-- [Retained V6 results](outputs/rgbt/v6_report/index.html)
-- [More source images and scenes](outputs/rgbt/v6_more_inputs/index.html)
-- [Pre/post consolidation verification](outputs/rgbt/unified_verification.json)
-
-Use `scripts/infer_rgbt.py`, `scripts/evaluate_rgbt.py`, and `scripts/train_rgbt_joint.py --config configs/rgbt_joint_train.json` through `bash scripts/rgbt_python.sh`. The shared model retains clear gains over reconstruction without refinement and remains close to the three-stage teacher; individual targets can regress. The old weights and historical results are preserved for comparison and rollback.

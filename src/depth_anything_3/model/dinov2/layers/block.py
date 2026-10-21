@@ -74,12 +74,14 @@ class Block(nn.Module):
 
         self.sample_drop_ratio = drop_path
 
-    def forward(self, x: Tensor, pos=None, attn_mask=None) -> Tensor:
-        def attn_residual_func(x: Tensor, pos=None, attn_mask=None) -> Tensor:
-            return self.ls1(self.attn(self.norm1(x), pos=pos, attn_mask=attn_mask))
+    def forward(self, x: Tensor, pos=None, attn_mask=None, lora_mask=None) -> Tensor:
+        def attn_residual_func(x: Tensor, pos=None, attn_mask=None, lora_mask=None) -> Tensor:
+            kwargs = {"lora_mask": lora_mask} if lora_mask is not None else {}
+            return self.ls1(self.attn(self.norm1(x), pos=pos, attn_mask=attn_mask, **kwargs))
 
-        def ffn_residual_func(x: Tensor) -> Tensor:
-            return self.ls2(self.mlp(self.norm2(x)))
+        def ffn_residual_func(x: Tensor, lora_mask=None) -> Tensor:
+            kwargs = {"lora_mask": lora_mask} if lora_mask is not None else {}
+            return self.ls2(self.mlp(self.norm2(x), **kwargs))
 
         if self.training and self.sample_drop_ratio > 0.1:
             # the overhead is compensated only for a drop path rate larger than 0.1
@@ -88,18 +90,20 @@ class Block(nn.Module):
                 residual_func=attn_residual_func,
                 sample_drop_ratio=self.sample_drop_ratio,
                 pos=pos,
+                lora_mask=lora_mask,
             )
             x = drop_add_residual_stochastic_depth(
                 x,
                 residual_func=ffn_residual_func,
                 sample_drop_ratio=self.sample_drop_ratio,
+                lora_mask=lora_mask,
             )
         elif self.training and self.sample_drop_ratio > 0.0:
-            x = x + self.drop_path1(attn_residual_func(x, pos=pos, attn_mask=attn_mask))
-            x = x + self.drop_path1(ffn_residual_func(x))  # FIXME: drop_path2
+            x = x + self.drop_path1(attn_residual_func(x, pos=pos, attn_mask=attn_mask, lora_mask=lora_mask))
+            x = x + self.drop_path1(ffn_residual_func(x, lora_mask=lora_mask))  # FIXME: drop_path2
         else:
-            x = x + attn_residual_func(x, pos=pos, attn_mask=attn_mask)
-            x = x + ffn_residual_func(x)
+            x = x + attn_residual_func(x, pos=pos, attn_mask=attn_mask, lora_mask=lora_mask)
+            x = x + ffn_residual_func(x, lora_mask=lora_mask)
         return x
 
 
@@ -108,6 +112,7 @@ def drop_add_residual_stochastic_depth(
     residual_func: Callable[[Tensor], Tensor],
     sample_drop_ratio: float = 0.0,
     pos: Optional[Tensor] = None,
+    lora_mask: Optional[Tensor] = None,
 ) -> Tensor:
     # 1) extract subset using permutation
     b, n, d = x.shape
@@ -116,12 +121,13 @@ def drop_add_residual_stochastic_depth(
     x_subset = x[brange]
 
     # 2) apply residual_func to get residual
+    kwargs = {"lora_mask": lora_mask[brange]} if lora_mask is not None else {}
     if pos is not None:
         # if necessary, apply rope to the subset
         pos = pos[brange]
-        residual = residual_func(x_subset, pos=pos)
+        residual = residual_func(x_subset, pos=pos, **kwargs)
     else:
-        residual = residual_func(x_subset)
+        residual = residual_func(x_subset, **kwargs)
 
     x_flat = x.flatten(1)
     residual = residual.flatten(1)

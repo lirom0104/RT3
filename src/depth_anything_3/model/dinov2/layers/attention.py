@@ -44,10 +44,11 @@ class Attention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         self.rope = rope
 
-    def forward(self, x: Tensor, pos=None, attn_mask=None) -> Tensor:
+    def forward(self, x: Tensor, pos=None, attn_mask=None, lora_mask=None) -> Tensor:
         B, N, C = x.shape
+        linear_kwargs = {"lora_mask": lora_mask} if lora_mask is not None else {}
         qkv = (
-            self.qkv(x)
+            self.qkv(x, **linear_kwargs)
             .reshape(B, N, 3, self.num_heads, C // self.num_heads)
             .permute(2, 0, 3, 1, 4)
         )
@@ -76,7 +77,7 @@ class Attention(nn.Module):
             x = attn @ v
 
         x = x.transpose(1, 2).reshape(B, N, C)
-        x = self.proj(x)
+        x = self.proj(x, **linear_kwargs)
         x = self.proj_drop(x)
         return x
 

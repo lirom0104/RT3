@@ -106,6 +106,7 @@ class DepthAnything3Net(nn.Module):
         infer_gs: bool = False,
         use_ray_pose: bool = False,
         ref_view_strategy: str = "saddle_balanced",
+        thermal_mask: torch.Tensor | None = None,
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass through the network.
@@ -118,6 +119,7 @@ class DepthAnything3Net(nn.Module):
             infer_gs: Enable Gaussian Splatting branch
             use_ray_pose: Use ray-based pose estimation
             ref_view_strategy: Strategy for selecting reference view
+            thermal_mask: Boolean (B, N) modality mask for an installed thermal adapter.
 
         Returns:
             Dictionary containing predictions and auxiliary features
@@ -130,7 +132,8 @@ class DepthAnything3Net(nn.Module):
             cam_token = None
 
         feats, aux_feats = self.backbone(
-            x, cam_token=cam_token, export_feat_layers=export_feat_layers, ref_view_strategy=ref_view_strategy
+            x, cam_token=cam_token, export_feat_layers=export_feat_layers,
+            ref_view_strategy=ref_view_strategy, thermal_mask=thermal_mask,
         )
         # feats = [[item for item in feat] for feat in feats]
         H, W = x.shape[-2], x.shape[-1]

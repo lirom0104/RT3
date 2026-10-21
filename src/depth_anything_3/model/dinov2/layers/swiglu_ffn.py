@@ -25,11 +25,12 @@ class SwiGLUFFN(nn.Module):
         self.w12 = nn.Linear(in_features, 2 * hidden_features, bias=bias)
         self.w3 = nn.Linear(hidden_features, out_features, bias=bias)
 
-    def forward(self, x: Tensor) -> Tensor:
-        x12 = self.w12(x)
+    def forward(self, x: Tensor, lora_mask=None) -> Tensor:
+        linear_kwargs = {"lora_mask": lora_mask} if lora_mask is not None else {}
+        x12 = self.w12(x, **linear_kwargs)
         x1, x2 = x12.chunk(2, dim=-1)
         hidden = F.silu(x1) * x2
-        return self.w3(hidden)
+        return self.w3(hidden, **linear_kwargs)
 
 
 try:

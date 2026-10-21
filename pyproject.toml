@@ -43,7 +43,6 @@ dependencies = [
 
 [project.optional-dependencies]
 app = ["gradio>=5", "pillow>=9.0"] # requires that python3>=3.10
-rgbt = ["lpips==0.1.4"]
 gs = ["gsplat @ git+https://github.com/nerfstudio-project/gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70"]
 all = ["depth-anything-3[app,gs]"]
 
